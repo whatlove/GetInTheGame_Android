@@ -96,7 +96,7 @@ class GymViewModel : ViewModel() {
     fun removePlayerFromTeam(player: Player) {
         val playerTeamId = player.teamId ?: return // If player has no team, do nothing
         val currentTeam = _teamsMap.value[playerTeamId] ?: return //
-        println("Player reference team size: ${currentTeam.players.size ?: "null"}")
+        println("Player reference team size: ${currentTeam.players.size}")
 
         val updatedTeamPlayers = currentTeam.players.filter { it.id != player.id }
         currentTeam.players = updatedTeamPlayers // Update the currentTeam

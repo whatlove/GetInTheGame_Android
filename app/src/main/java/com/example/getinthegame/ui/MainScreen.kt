@@ -60,7 +60,6 @@ fun MainScreen(
         Column(modifier = Modifier.weight(1f)) {
             TeamList(
                 teams = teams.value,
-                playersPerTeam = uiState.value.playersPerTeam,
                 gymViewModel = gymViewModel
             )
         }
@@ -201,7 +200,6 @@ private fun TeamCard(
 @Composable
 fun TeamList(
     teams: List<Team>,
-    playersPerTeam: Int,
     gymViewModel: GymViewModel,
     modifier: Modifier = Modifier
 ) {
@@ -710,6 +708,6 @@ fun TeamsPreview() {
             team1,
             team2
         )
-        TeamList(teams, 6, gymViewModel = viewModel())
+        TeamList(teams, gymViewModel = viewModel())
     }
 }
