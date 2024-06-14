@@ -1,12 +1,14 @@
 package com.example.getinthegame.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -98,6 +100,33 @@ fun MainScreen(
             )
         }
     }
+
+    // Show the ChooseTeamToRemoveDialog if needed
+    val courtToRemoveTeamFrom = uiState.value.courtToRemoveTeamFrom
+    val teamToAssign = uiState.value.teamToAssign
+    if (courtToRemoveTeamFrom != null && teamToAssign != null) {
+        val teamsOnCourt = teams.value.filter { it.court == courtToRemoveTeamFrom }
+        ChooseTeamToRemoveDialog(
+            courtNumber = courtToRemoveTeamFrom,
+            teamsOnCourt = teamsOnCourt,
+            onTeamSelected = { teamToRemove ->
+                gymViewModel.removeTeamFromCourt(teamToRemove)
+                gymViewModel.assignTeamToCourt(teamToAssign, courtToRemoveTeamFrom)
+            },
+            onDismiss = { gymViewModel.clearTeamRemovalState() }
+        )
+    }
+
+    // Show the NextTeamDialog if needed
+    val teamToAssignNext = uiState.value.teamToAssign
+    val skippedTeam = uiState.value.skippedTeam
+    if (teamToAssignNext != null && skippedTeam != null) {
+        SkippedTeamDialog(
+            nextTeam = teamToAssignNext,
+            skippedTeam = skippedTeam,
+            onDismiss = { gymViewModel.clearTeamOrderPrompt() }
+        )
+    }
 }
 
 
@@ -126,7 +155,6 @@ private fun TeamPlayerCard(
 @Composable
 private fun TeamCard(
     team: Team,
-    playersPerTeam: Int,
     gymViewModel: GymViewModel,
     modifier: Modifier = Modifier
 ) {
@@ -144,7 +172,7 @@ private fun TeamCard(
                     .padding(2.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                items(team.totalTeam(playersPerTeam)) { player ->
+                items(team.totalTeam()) { player ->
                     val showColor = if(player == team.nullPlayer) nullTeamColor else team.darkColor
                     TeamPlayerCard(player = player, color = showColor)
                 }
@@ -159,7 +187,7 @@ private fun TeamCard(
                 CourtButton(team = team, courtNumber = 1, gymViewModel = gymViewModel)
                 Spacer(modifier = modifier.weight(1f))
                 Text(
-                    text = "Team ${team.order} - ${team.name}",
+                    text = team.name,
                     color = contentColorFor(backgroundColor = team.color) // Dynamic text color
                 )
                 Spacer(modifier = modifier.weight(1f))
@@ -189,7 +217,6 @@ fun TeamList(
             items(teamsOnCourt) { team ->
                 TeamCard(
                     team = team,
-                    playersPerTeam = playersPerTeam,
                     gymViewModel = gymViewModel
                 )
             }
@@ -200,7 +227,6 @@ fun TeamList(
             items(inactiveTeams) { team ->
                 TeamCard(
                     team = team,
-                    playersPerTeam = playersPerTeam,
                     gymViewModel = gymViewModel
                 )
             }
@@ -272,7 +298,6 @@ fun CourtButton(
             onDismiss = { showLeaveCourtDialog = false }
         )
     }
-
 }
 
 @Composable
@@ -285,7 +310,7 @@ fun ConfirmEnterCourtDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Ready to play?") },
-        text = { Text("${team.name} team playing on court $courtNumber?") },
+        text = { Text("${team.name} playing on court $courtNumber?") },
         confirmButton = {
             Button(onClick = onConfirm) {
                 Text("Play!")
@@ -309,7 +334,7 @@ fun ConfirmLeaveCourtDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Game over?") },
-        text = { Text("${team.name} team finished on court ${team.court}?") },
+        text = { Text("${team.name} finished on court ${team.court}?") },
         confirmButton = {
             Button(onClick = onConfirmAndNext) {
                 Text("Next Team")
@@ -323,6 +348,97 @@ fun ConfirmLeaveCourtDialog(
                 TextButton(onClick = onConfirm) {
                     Text("Finished")
                 }
+            }
+        }
+    )
+}
+
+@Composable
+fun TeamCardForDialog(
+    team: Team,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        color = team.color,
+        shape = RoundedCornerShape(8.dp),
+        modifier = modifier
+            .shadow(elevation = 4.dp)
+            .fillMaxWidth()
+    ) {
+        Text(
+            text = "${team.name} (${team.availableSpotsText})",
+            color = contentColorFor(backgroundColor = team.color),
+            modifier = Modifier.padding(8.dp)
+        )
+    }
+}
+
+@Composable
+fun ChooseTeamToRemoveDialog(
+    courtNumber: Int,
+    teamsOnCourt: List<Team>,
+    onTeamSelected: (Team) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val lowerOrderTeam = teamsOnCourt.minByOrNull { it.order } // Find the team with the lowest order
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Court $courtNumber is Full") },
+        text = {
+            Column {
+                Text("Choose a team to remove:")
+                LazyColumn {
+                    items(teamsOnCourt) { team ->
+                        TextButton(onClick = { onTeamSelected(team) }) {
+                            TeamCardForDialog(
+                                team = team,
+                                modifier = Modifier
+                                    .then(
+                                        if (team == lowerOrderTeam) {
+                                            Modifier.border(2.dp, Color.Black, RoundedCornerShape(8.dp))
+                                        } else {
+                                            Modifier
+                                        }
+                                    )
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            // No confirm button, selection happens within the dialog
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun SkippedTeamDialog(
+    nextTeam: Team,
+    skippedTeam: Team,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Out of Order!") },
+        text = {
+            Column {
+                Text("${skippedTeam.name} should play before ${nextTeam.name}.")
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Go back and select ${skippedTeam.name}.")
+                Spacer(modifier = Modifier.height(16.dp))
+                TeamCardForDialog(team = skippedTeam)
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) {
+                Text("Okay")
             }
         }
     )
@@ -512,20 +628,7 @@ fun AssignPlayerToTeamDialog(
                     val teamSpotsAvailable = playersPerTeam - team.players.size
 
                     TextButton(onClick = { onTeamSelected(team) }) {
-                        // Added surface for background color, rounded corners and depth
-                        Surface(
-                            color = team.color,
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier
-                                .shadow(elevation = 4.dp)
-                                .fillMaxWidth()
-                        ) {
-                            Text(
-                                "Team ${team.order} - ${team.name} ($teamSpotsAvailable of $playersPerTeam available)",
-                                color = contentColorFor(backgroundColor = team.color), // Dynamic text color
-                                modifier = Modifier.padding(8.dp)
-                            )
-                        }
+                        TeamCardForDialog(team = team)
                     }
                 }
             }

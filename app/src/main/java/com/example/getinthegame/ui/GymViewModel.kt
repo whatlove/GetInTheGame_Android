@@ -31,6 +31,8 @@ class GymViewModel : ViewModel() {
     val gameLogs: StateFlow<List<GameLog>> = _gameLogs.asStateFlow()
 
     init {
+        Team.uiState = uiState // Initialize the companion object property
+
         addTeam()
         addTeam()
     }
@@ -42,7 +44,7 @@ class GymViewModel : ViewModel() {
         while (_teamsMap.value.any { it.value.color == newColor.color }) {
             newColor = teamColors.random()
         }
-        val newTeam = Team(order = nextOrder, color = newColor.color, name = newColor.name)
+        val newTeam = Team(order = nextOrder, color = newColor.color, colorName = newColor.name)
         _teamsMap.value += newTeam.id to newTeam
     }
     private fun removeTeam(team: Team) {
@@ -66,7 +68,7 @@ class GymViewModel : ViewModel() {
     }
 
     fun getAvailableTeams(): List<Team> {
-        return teams.value.filter { !it.isFull(_uiState.value.playersPerTeam) }
+        return teams.value.filter { !it.isFull }
     }
     fun addPlayerToTeam(player: Player, teamId: UUID) {
         val team = _teamsMap.value[teamId] ?: return // Get the Team from the map
@@ -76,7 +78,7 @@ class GymViewModel : ViewModel() {
         _teamsMap.value += (teamId to updatedTeam)
 
         // If the team is full AND there are less than 2 available teams, add a new team
-        if (updatedTeam.isFull(_uiState.value.playersPerTeam) &&
+        if (updatedTeam.isFull &&
             getAvailableTeams().count() < 2) {
             addTeam()
         }
@@ -126,8 +128,31 @@ class GymViewModel : ViewModel() {
     }
 
     fun assignTeamToCourt(team: Team, courtNumber: Int) {
-        val updatedTeam = team.copy(court = courtNumber)
-        _teamsMap.value += (updatedTeam.id to updatedTeam)
+        val teamsOnCourt = _teamsMap.value.values.filter { it.court == courtNumber }
+
+        if (courtNumber == -1) {
+            // Team is leaving the court, proceed with removal logic (unchanged)
+            removeTeamFromCourt(team)
+        } else {
+            val nextAvailableTeam = getNextAvailableTeam() // Get the next team in order that hasn't played yet
+            if (nextAvailableTeam != null && nextAvailableTeam.id != team.id) {
+                // There's a lower order team waiting, prompt the user
+                _uiState.value = _uiState.value.copy(
+                    skippedTeam = nextAvailableTeam,
+                    teamToAssign = team
+                )
+            } else if (teamsOnCourt.size < 2) {
+                // Court has space and the selected team is the next in order, assign the team
+                val updatedTeam = team.copy(court = courtNumber)
+                _teamsMap.value += (updatedTeam.id to updatedTeam)
+            } else {
+                // Court is full, trigger a dialog to choose a team to remove (unchanged)
+                _uiState.value = _uiState.value.copy(
+                    courtToRemoveTeamFrom = courtNumber,
+                    teamToAssign = team
+                )
+            }
+        }
     }
     fun removeTeamFromCourt(team: Team) {
         // Log the game
@@ -139,6 +164,20 @@ class GymViewModel : ViewModel() {
             opponentScore = 0 // ADD TRACK SCORE ABILITY
         )
         removeTeam(team) // Destroy the team
+        clearTeamRemovalState()
+    }
+
+    fun clearTeamRemovalState() {
+        _uiState.value = _uiState.value.copy(
+            courtToRemoveTeamFrom = null,
+            teamToAssign = null
+        )
+    }
+    fun clearTeamOrderPrompt() {
+        _uiState.value = _uiState.value.copy(
+            teamToAssign = null,
+            skippedTeam = null
+        )
     }
 
 }
