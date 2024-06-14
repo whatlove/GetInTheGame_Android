@@ -24,6 +24,9 @@ class GymViewModel : ViewModel() {
         initialValue = emptyList()
     )
 
+    private val _selectedTeam = MutableStateFlow<Team?>(null)
+    val selectedTeam: StateFlow<Team?> = _selectedTeam.asStateFlow()
+
     private val _players = MutableStateFlow<List<Player>>(emptyList())
     val players: StateFlow<List<Player>> = _players.asStateFlow()
 
@@ -58,6 +61,13 @@ class GymViewModel : ViewModel() {
         _teamsMap.value -= team.id
         // ADD A NEW TEAM IF THERE ARE LESS THAN 2 AVAILABLE TEAMS
         if(_teamsMap.value.count() < 2) { addTeam() }
+    }
+
+    fun selectTeam(team: Team) {
+        _selectedTeam.value = team
+    }
+    fun clearSelectedTeam() {
+        _selectedTeam.value = null
     }
 
     fun addPlayer(player: Player) {

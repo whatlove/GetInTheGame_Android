@@ -2,6 +2,7 @@ package com.example.getinthegame.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -157,9 +158,18 @@ private fun TeamCard(
     gymViewModel: GymViewModel,
     modifier: Modifier = Modifier
 ) {
+    val isSelected by gymViewModel.selectedTeam.collectAsState()
+
     Card(modifier = modifier
-        .padding(4.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
+        .padding(4.dp)
+        .clickable {
+            if (isSelected == null && team.players.isNotEmpty()) {
+                gymViewModel.selectTeam(team)
+            } else {
+                gymViewModel.clearSelectedTeam()
+            }
+        },
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected == team) 16.dp else 12.dp)
     ) {
         Column(modifier = Modifier
             .background(color = team.color)
@@ -175,6 +185,10 @@ private fun TeamCard(
                     val showColor = if(player == team.nullPlayer) nullTeamColor else team.darkColor
                     TeamPlayerCard(player = player, color = showColor)
                 }
+            }
+            // Conditionally display the player list
+            if (isSelected == team) {
+                PlayerPreviewList(team.players)
             }
             Row(
                 modifier = Modifier
@@ -193,6 +207,17 @@ private fun TeamCard(
                 CourtButton(team = team, courtNumber = 2, gymViewModel = gymViewModel)
 
             }
+        }
+    }
+}
+
+@Composable
+fun PlayerPreviewList(
+    players: List<Player>
+) {
+    Column(modifier = Modifier.padding(top = 8.dp)) {
+        players.forEach { player ->
+            Text("- ${player.name}")
         }
     }
 }
