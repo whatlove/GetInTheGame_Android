@@ -4,6 +4,6 @@ data class GameLog(
     val team: Team,
     val score: Int,
     val court: Int,
-    val opponent: Team,
-    val opponentScore: Int
+    val opponent: Team?,
+    val opponentScore: Int?
 )

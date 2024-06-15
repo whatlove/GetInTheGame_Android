@@ -1,5 +1,6 @@
 package com.example.getinthegame.ui
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -52,15 +53,15 @@ fun MainScreen(
     paddingValues: PaddingValues = PaddingValues(),
     gymViewModel: GymViewModel = viewModel()
 ) {
-    val teams = gymViewModel.teams.collectAsState()
-    val players = gymViewModel.players.collectAsState()
     val uiState = gymViewModel.uiState.collectAsState()
+    val teams = uiState.value.teams.values.toList()
+    val players = uiState.value.players
 
     Column(modifier = modifier.padding(paddingValues)) {
         // Top Half - TeamList
         Column(modifier = Modifier.weight(1f)) {
             TeamList(
-                teams = teams.value,
+                teams = teams,
                 gymViewModel = gymViewModel
             )
         }
@@ -95,7 +96,7 @@ fun MainScreen(
         // Bottom Half - PlayerList
         Column(modifier = Modifier.weight(1f)) {
             PlayerList(
-                players = players.value,
+                players = players,
                 gymViewModel = gymViewModel
             )
         }
@@ -105,7 +106,7 @@ fun MainScreen(
     val courtToRemoveTeamFrom = uiState.value.courtToRemoveTeamFrom
     val teamToAssign = uiState.value.teamToAssign
     if (courtToRemoveTeamFrom != null && teamToAssign != null) {
-        val teamsOnCourt = teams.value.filter { it.court == courtToRemoveTeamFrom }
+        val teamsOnCourt = teams.filter { it.court == courtToRemoveTeamFrom }
         ChooseTeamToRemoveDialog(
             courtNumber = courtToRemoveTeamFrom,
             teamsOnCourt = teamsOnCourt,
@@ -152,24 +153,28 @@ private fun TeamPlayerCard(
     }
 }
 
+@SuppressLint("StateFlowValueCalledInComposition")
 @Composable
 private fun TeamCard(
     team: Team,
     gymViewModel: GymViewModel,
     modifier: Modifier = Modifier
 ) {
-    val isSelected by gymViewModel.selectedTeam.collectAsState()
+    val uiState by gymViewModel.uiState.collectAsState()
+    val isSelected = uiState.selectedTeam == team
 
     Card(modifier = modifier
         .padding(4.dp)
         .clickable {
-            if (isSelected == null && team.players.isNotEmpty()) {
-                gymViewModel.selectTeam(team)
+            if (isSelected) {
+                gymViewModel.clearSelectedTeam() // Clear selection if already selected
             } else {
-                gymViewModel.clearSelectedTeam()
+                if (team.players.isNotEmpty()) {
+                    gymViewModel.selectTeam(team) // Select if not selected and has players
+                }
             }
         },
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected == team) 16.dp else 12.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 16.dp else 12.dp)
     ) {
         Column(modifier = Modifier
             .background(color = team.color)
@@ -187,7 +192,7 @@ private fun TeamCard(
                 }
             }
             // Conditionally display the player list
-            if (isSelected == team) {
+            if (isSelected) {
                 PlayerPreviewList(team.players)
             }
             Row(
@@ -205,8 +210,8 @@ private fun TeamCard(
                 )
                 Spacer(modifier = modifier.weight(1f))
                 CourtButton(team = team, courtNumber = 2, gymViewModel = gymViewModel)
-
             }
+            Text(text = team.currentOpponent?.name ?: "No Opponent")
         }
     }
 }
@@ -283,7 +288,11 @@ fun CourtButton(
         },
         enabled = team.court == 0 || team.court == courtNumber, // Disable if team is on the other court or has already played
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (team.court == courtNumber) team.darkColor else nullTeamColor
+            containerColor = when (courtNumber) {
+                team.court -> team.darkColor
+                team.currentOpponent?.court -> team.currentOpponent!!.darkColor
+                else -> nullTeamColor
+            }
         ),
         modifier = modifier
             .padding(2.dp)
@@ -602,7 +611,7 @@ fun PlayerTeamButton(
             else { showRemoveDialog = true }
         },
         colors = ButtonDefaults.buttonColors(
-            containerColor = gymViewModel.teams.value.find { it.id == player.teamId}?.color ?: nullTeamColor
+            containerColor = gymViewModel.uiState.value.teams.values.find { it.id == player.teamId}?.color ?: nullTeamColor
         ),
         modifier = modifier
     ) {
@@ -617,8 +626,7 @@ fun PlayerTeamButton(
             onTeamSelected = { t ->
                 onAssignTeam(t)
                 showAssignDialog = false
-            },
-            gymViewModel = gymViewModel
+            }
         )
     }
     if (showRemoveDialog) {
@@ -638,8 +646,7 @@ fun AssignPlayerToTeamDialog(
     player: Player,
     availableTeams: List<Team>,
     onDismiss: () -> Unit,
-    onTeamSelected: (Team) -> Unit,
-    gymViewModel: GymViewModel
+    onTeamSelected: (Team) -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -647,8 +654,6 @@ fun AssignPlayerToTeamDialog(
         text = {
             LazyColumn {
                 items(availableTeams.sortedBy { it.order }) { team ->
-                    val playersPerTeam = gymViewModel.uiState.collectAsState().value.playersPerTeam
-                    val teamSpotsAvailable = playersPerTeam - team.players.size
 
                     TextButton(onClick = { onTeamSelected(team) }) {
                         TeamCardForDialog(team = team)

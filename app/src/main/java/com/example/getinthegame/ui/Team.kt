@@ -30,6 +30,13 @@ data class Team(
             else -> "$availableSpots of ${uiState.value.playersPerTeam} players needed"
         }
 
+    val currentOpponent: Team?
+        get() = uiState.value.teams.values.find {
+            it.court != 0 &&        // Team is assigned to a court
+            it.court == court &&    // Team is assigned to the same court
+            it.id != id             // Team is not the current team
+        }
+
     companion object {
         lateinit var uiState: StateFlow<GymUiState>
     }
