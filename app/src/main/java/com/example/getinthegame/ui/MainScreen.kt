@@ -1,6 +1,5 @@
 package com.example.getinthegame.ui
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -40,6 +40,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -58,6 +59,12 @@ fun MainScreen(
     val players = uiState.value.players
 
     Column(modifier = modifier.padding(paddingValues)) {
+        PlayerCountControl(
+            playersPerTeam = uiState.value.playersPerTeam,
+            onIncrease = { gymViewModel.increasePlayersPerTeam() },
+            onDecrease = { gymViewModel.decreasePlayersPerTeam() }
+        )
+
         // Top Half - TeamList
         Column(modifier = Modifier.weight(1f)) {
             TeamList(
@@ -130,6 +137,46 @@ fun MainScreen(
     }
 }
 
+@Composable
+fun PlayerCountControl(
+    playersPerTeam: Int,
+    onIncrease: () -> Unit,
+    onDecrease: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Button(
+            onClick = onDecrease,
+            enabled = playersPerTeam > 6,
+            shape = RoundedCornerShape(
+                topStart = 16.dp,        // Top left corner (square)
+                topEnd = 0.dp,         // Top right corner (rounded)
+                bottomEnd = 0.dp,      // Bottom right corner (rounded)
+                bottomStart = 16.dp     // Bottom left corner (square)
+            )
+        ) {
+            Text(text = "-")
+        }
+        Text(text = "Players per Team: $playersPerTeam")
+        Button(
+            onClick = onIncrease,
+            enabled = playersPerTeam < 8,
+            shape = RoundedCornerShape(
+                topStart = 0.dp,        // Top left corner (square)
+                topEnd = 16.dp,         // Top right corner (rounded)
+                bottomEnd = 16.dp,      // Bottom right corner (rounded)
+                bottomStart = 0.dp     // Bottom left corner (square)
+            )
+        ) {
+            Text(text = "+")
+        }
+    }
+}
+
 
 // Team UI
 @Composable
@@ -153,7 +200,6 @@ private fun TeamPlayerCard(
     }
 }
 
-@SuppressLint("StateFlowValueCalledInComposition")
 @Composable
 private fun TeamCard(
     team: Team,
@@ -203,15 +249,19 @@ private fun TeamCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 CourtButton(team = team, courtNumber = 1, gymViewModel = gymViewModel)
-                Spacer(modifier = modifier.weight(1f))
-                Text(
-                    text = team.name,
-                    color = contentColorFor(backgroundColor = team.color) // Dynamic text color
-                )
-                Spacer(modifier = modifier.weight(1f))
+//                Spacer(modifier = modifier.weight(1f))
+//                Text(
+//                    text = team.name,
+//                    color = contentColorFor(backgroundColor = team.color) // Dynamic text color
+//                )
+//                Spacer(modifier = modifier.weight(1f))
                 CourtButton(team = team, courtNumber = 2, gymViewModel = gymViewModel)
             }
-            Text(text = team.currentOpponent?.name ?: "No Opponent")
+            Text(
+                text = team.currentOpponent?.name ?: "",
+                textAlign = TextAlign.End,
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }
@@ -281,24 +331,36 @@ fun CourtButton(
     var showLeaveCourtDialog by remember { mutableStateOf(false) }
     var selectedCourt by remember { mutableStateOf<Int?>(null) } // Track selected court
 
-    ElevatedButton(
-        onClick = {
-            selectedCourt = courtNumber
-            if (team.court > 0) { showLeaveCourtDialog = true} else {showEnterCourtDialog = true }
-        },
-        enabled = team.court == 0 || team.court == courtNumber, // Disable if team is on the other court or has already played
-        colors = ButtonDefaults.buttonColors(
-            containerColor = when (courtNumber) {
-                team.court -> team.darkColor
-                team.currentOpponent?.court -> team.currentOpponent!!.darkColor
-                else -> nullTeamColor
-            }
-        ),
-        modifier = modifier
-            .padding(2.dp)
-    ) {
-        Text(text = "Court $courtNumber")
+    val oppositeCourt = if (courtNumber == 1) 2 else 1
+    val courtText = when {
+        team.court == courtNumber -> "ON\nCourt $courtNumber"
+        team.currentOpponent?.court == oppositeCourt -> "vs"
+        else -> "Court $courtNumber"
     }
+    val courtColor = when {
+        team.court == courtNumber -> team.darkColor
+        team.currentOpponent?.court == oppositeCourt -> team.currentOpponent?.darkColor ?: nullTeamColor
+        else -> nullTeamColor
+    }
+
+    Column() {
+        ElevatedButton(
+            onClick = {
+                selectedCourt = courtNumber
+                if (team.court > 0) { showLeaveCourtDialog = true} else {showEnterCourtDialog = true }
+            },
+            // enabled = team.court == 0 || team.court == courtNumber, // Disable if team is on the other court or has already played
+            colors = ButtonDefaults.buttonColors(containerColor = courtColor),
+            modifier = modifier
+                .padding(2.dp)
+        ) {
+            Text(
+                text = courtText,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+
 
     if (showEnterCourtDialog) {
         ConfirmEnterCourtDialog(

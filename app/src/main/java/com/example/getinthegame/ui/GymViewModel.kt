@@ -119,7 +119,11 @@ class GymViewModel : ViewModel() {
     }
 
 
-    fun updatePlayersPerTeam(playersPerTeam: Int) {
+    fun increasePlayersPerTeam() {
+        val playersPerTeam = _uiState.value.playersPerTeam + 1
+        _uiState.value = _uiState.value.copy(playersPerTeam = playersPerTeam)
+    }fun decreasePlayersPerTeam() {
+        val playersPerTeam = _uiState.value.playersPerTeam - 1
         _uiState.value = _uiState.value.copy(playersPerTeam = playersPerTeam)
     }
 
@@ -145,9 +149,13 @@ class GymViewModel : ViewModel() {
                 )
             } else if (teamsOnCourt.size < 2) {
                 // Court has space and the selected team is the next in order, assign the team
-                val updatedTeam = team.copy(court = courtNumber)
                 _uiState.value = _uiState.value.copy(
-                    teams = _uiState.value.teams + (updatedTeam.id to updatedTeam)
+                    teams = _uiState.value.teams.toMutableMap().apply {
+                        val updatedTeam = this[team.id]?.copy(court = courtNumber)
+                        if (updatedTeam != null) {
+                            this[team.id] = updatedTeam
+                        }
+                    }
                 )
             } else {
                 // Court is full, trigger a dialog to choose a team to remove (unchanged)
