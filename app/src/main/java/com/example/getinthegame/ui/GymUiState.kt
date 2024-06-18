@@ -5,8 +5,8 @@ import java.util.UUID
 data class GymUiState (
     val isAddingPlayer: Boolean = false,
 
-    val players: List<Player> = emptyList(),
     val teams: Map<UUID, Team> = emptyMap(),
+    val players: List<Player> = emptyList(),
     val playersPerTeam: Int = 6,
 
     val courtToRemoveTeamFrom: Int? = null, // Court needing a team removed
