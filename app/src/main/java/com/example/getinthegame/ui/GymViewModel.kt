@@ -65,7 +65,7 @@ class GymViewModel : ViewModel() {
     }
 
     fun getAvailableTeams(): List<Team> {
-        return uiState.value.teams.values.filter { !it.isFull }
+        return uiState.value.teams.values.filter { !it.isFull && it.court == 0 } // Return teams that are not full and not on a court
     }
     fun addPlayerToTeam(player: Player, teamId: UUID) {
         val team = _uiState.value.teams[teamId] ?: return // Get the Team from the map
@@ -137,7 +137,7 @@ class GymViewModel : ViewModel() {
         val teamsOnCourt = uiState.value.teams.values.filter { it.court == courtNumber }
 
         if (courtNumber == -1) {
-            // Team is leaving the court, proceed with removal logic (unchanged)
+            // Team is leaving the court, proceed with removal logic
             removeTeamFromCourt(team)
         } else {
             val nextAvailableTeam = getNextAvailableTeam() // Get the next team in order that hasn't played yet
@@ -164,6 +164,11 @@ class GymViewModel : ViewModel() {
                     teamToAssign = team
                 )
             }
+        }
+
+        // If there are less than 2 available teams, add a new team
+        if (getAvailableTeams().count() < 2) {
+            addTeam()
         }
     }
     fun removeTeamFromCourt(team: Team) {

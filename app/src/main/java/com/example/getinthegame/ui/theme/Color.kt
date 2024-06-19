@@ -3,6 +3,7 @@ import androidx.compose.ui.graphics.Color
 import com.example.getinthegame.ui.TeamColor
 
 val nullTeamColor = Color(0xFFDEB887)
+val nullTeamTextColor = Color.Black
 val magentaTeamColor = TeamColor(Color(0xFF5A0000), "Magenta")
 val redTeamColor = TeamColor(Color(0xFFDD1C1A), "Red")
 val pinkTeamColor = TeamColor(Color(0xFFe75184), "Pink")

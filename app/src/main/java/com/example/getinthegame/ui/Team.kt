@@ -1,6 +1,7 @@
 package com.example.getinthegame.ui
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.graphics.ColorUtils
 import com.example.getinthegame.ui.theme.teamColors
@@ -21,7 +22,7 @@ data class Team(
 
     val isFull: Boolean
         get() = players.size >= uiState.value.playersPerTeam
-    val availableSpots: Int
+    private val availableSpots: Int
         get() = uiState.value.playersPerTeam - players.size
     val availableSpotsText: String
         get() = when {
@@ -41,8 +42,9 @@ data class Team(
         lateinit var uiState: StateFlow<GymUiState>
     }
 
-    val darkColor = Color(ColorUtils.blendARGB(color.toArgb(), Color.Black.toArgb(), .2f))
     val nullPlayer = Player("+", 0)
+    val darkColor = Color(ColorUtils.blendARGB(color.toArgb(), Color.Black.toArgb(), .2f))
+    val textColor = if (color.luminance() > 0.5) Color.Black else Color.White
 
     fun totalTeam(): List<Player> {
         val teamPlayers = players.toMutableList()

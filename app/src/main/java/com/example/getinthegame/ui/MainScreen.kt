@@ -28,7 +28,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -58,6 +57,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.getinthegame.ui.theme.GetInTheGameTheme
 import com.example.getinthegame.ui.theme.nullTeamColor
+import com.example.getinthegame.ui.theme.nullTeamTextColor
 
 
 @Composable
@@ -195,6 +195,7 @@ fun PlayerCountControl(
 private fun TeamPlayerCard(
     player: Player,
     color: Color,
+    textColor: Color,
     modifier: Modifier = Modifier
 ) {
     val initial: String = player.name.first().toString()
@@ -207,6 +208,7 @@ private fun TeamPlayerCard(
             .background(color = color)
             .padding(2.dp),
             text = initial,
+            color = textColor,
             fontWeight = FontWeight.Bold
         )
     }
@@ -246,13 +248,20 @@ private fun TeamCard(
             ) {
                 items(team.totalTeam()) { player ->
                     val showColor = if(player == team.nullPlayer) nullTeamColor else team.darkColor
-                    TeamPlayerCard(player = player, color = showColor)
+                    val textColor = if(player == team.nullPlayer) nullTeamTextColor else team.textColor
+                    TeamPlayerCard(player = player, color = showColor, textColor = textColor)
                 }
             }
             // Conditionally display the player list
             if (isSelected) {
-                PlayerPreviewList(team.players)
+                PlayerPreviewList(team)
             }
+            Text(
+                text = team.name,
+                color = team.textColor,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxSize()
+            )
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -261,16 +270,11 @@ private fun TeamCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 CourtButton(team = team, courtNumber = 1, gymViewModel = gymViewModel)
-//                Spacer(modifier = modifier.weight(1f))
-//                Text(
-//                    text = team.name,
-//                    color = contentColorFor(backgroundColor = team.color) // Dynamic text color
-//                )
-//                Spacer(modifier = modifier.weight(1f))
                 CourtButton(team = team, courtNumber = 2, gymViewModel = gymViewModel)
             }
             Text(
                 text = team.currentOpponent?.name ?: "",
+                color = team.textColor,
                 textAlign = TextAlign.End,
                 modifier = Modifier.fillMaxSize()
             )
@@ -280,11 +284,14 @@ private fun TeamCard(
 
 @Composable
 fun PlayerPreviewList(
-    players: List<Player>
+    team: Team
 ) {
     Column(modifier = Modifier.padding(top = 8.dp)) {
-        players.forEach { player ->
-            Text("- ${player.name}")
+        team.players.forEach { player ->
+            Text(
+                text = "- ${player.name}",
+                color = team.textColor
+            )
         }
     }
 }
@@ -354,6 +361,11 @@ fun CourtButton(
         team.currentOpponent?.court == oppositeCourt -> team.currentOpponent?.darkColor ?: nullTeamColor
         else -> nullTeamColor
     }
+    val textColor = when {
+        team.court == courtNumber -> team.textColor
+        team.currentOpponent?.court == oppositeCourt -> team.currentOpponent?.textColor ?: nullTeamTextColor
+        else -> nullTeamTextColor
+    }
 
     Column() {
         ElevatedButton(
@@ -368,6 +380,7 @@ fun CourtButton(
         ) {
             Text(
                 text = courtText,
+                color = textColor,
                 textAlign = TextAlign.Center,
             )
         }
@@ -473,7 +486,7 @@ fun TeamCardForDialog(
     ) {
         Text(
             text = "${team.name} (${team.availableSpotsText})",
-            color = contentColorFor(backgroundColor = team.color),
+            color = team.textColor,
             modifier = Modifier.padding(8.dp)
         )
     }
@@ -770,6 +783,10 @@ fun PlayerTeamButton(
     var showRemoveDialog by remember { mutableStateOf(false) }
     var showErrorDialog by remember { mutableStateOf(false) }
 
+    val team = gymViewModel.uiState.value.teams.values.find { it.id == player.teamId }
+    val teamColor = team?.color ?: nullTeamColor
+    val textColor = team?.textColor ?: nullTeamTextColor
+
     ElevatedButton(
         onClick = {
             if (player.teamId == null) { joiningTeam = true }
@@ -777,11 +794,14 @@ fun PlayerTeamButton(
             showGetPinDialog = true
         },
         colors = ButtonDefaults.buttonColors(
-            containerColor = gymViewModel.uiState.value.teams.values.find { it.id == player.teamId}?.color ?: nullTeamColor
+            containerColor = teamColor
         ),
         modifier = modifier
     ) {
-        Text(text = if (player.teamId == null) {"+"} else {"-"})
+        Text(
+            text = if (player.teamId == null) {"+"} else {"-"},
+            color = textColor
+        )
     }
 
     if (showGetPinDialog) {
