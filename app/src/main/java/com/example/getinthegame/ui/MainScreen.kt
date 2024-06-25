@@ -372,9 +372,10 @@ fun CourtButton(
             onClick = {
                 selectedCourt = courtNumber
                 when {
-                    team.court == courtNumber -> showLeaveCourtDialog = true
-                    team.currentOpponent?.court == oppositeCourt -> {}
-                    else -> showEnterCourtDialog = true
+                    team.court == courtNumber -> showLeaveCourtDialog = true // Team is on this court, show Leave dialog
+                    team.court == oppositeCourt -> {} // Do nothing if no opponent
+                    team.currentOpponent?.court == oppositeCourt -> {} // Do nothing if opponent button selected
+                    else -> showEnterCourtDialog = true // Team is not on any court, show Enter dialog
                 }
             },
             // enabled = team.court == 0 || team.court == courtNumber, // Disable if team is on the other court or has already played
@@ -799,7 +800,8 @@ fun PlayerTeamButton(
     var showRemoveDialog by remember { mutableStateOf(false) }
     var showErrorDialog by remember { mutableStateOf(false) }
 
-    val team = gymViewModel.uiState.value.teams.values.find { it.id == player.teamId }
+    val uiState by gymViewModel.uiState.collectAsState()
+    val team = uiState.teams.values.find { it.id == player.teamId }
     val teamColor = team?.color ?: nullTeamColor
     val textColor = team?.textColor ?: nullTeamTextColor
 
