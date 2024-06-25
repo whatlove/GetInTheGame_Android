@@ -371,7 +371,11 @@ fun CourtButton(
         ElevatedButton(
             onClick = {
                 selectedCourt = courtNumber
-                if (team.court > 0) { showLeaveCourtDialog = true} else {showEnterCourtDialog = true }
+                when {
+                    team.court == courtNumber -> showLeaveCourtDialog = true
+                    team.currentOpponent?.court == oppositeCourt -> {}
+                    else -> showEnterCourtDialog = true
+                }
             },
             // enabled = team.court == 0 || team.court == courtNumber, // Disable if team is on the other court or has already played
             colors = ButtonDefaults.buttonColors(containerColor = courtColor),
@@ -429,7 +433,13 @@ fun ConfirmEnterCourtDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Ready to play?") },
-        text = { Text("${team.name} playing on court $courtNumber?") },
+        text = {
+            Column {
+                Text("Entering court $courtNumber?")
+                Spacer(modifier = Modifier.height(8.dp))
+                TeamCardForDialog(team = team)
+            }
+        },
         confirmButton = {
             Button(onClick = onConfirm) {
                 Text("Play!")
@@ -453,7 +463,13 @@ fun ConfirmLeaveCourtDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Game over?") },
-        text = { Text("${team.name} finished on court ${team.court}?") },
+        text = {
+            Column {
+                Text("Finished on court ${team.court}?")
+                Spacer(modifier = Modifier.height(8.dp))
+                TeamCardForDialog(team = team)
+            }
+       },
         confirmButton = {
             Button(onClick = onConfirmAndNext) {
                 Text("Next Team")
