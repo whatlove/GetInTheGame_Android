@@ -367,7 +367,7 @@ fun CourtButton(
         else -> nullTeamTextColor
     }
 
-    Column() {
+    Column {
         ElevatedButton(
             onClick = {
                 selectedCourt = courtNumber
