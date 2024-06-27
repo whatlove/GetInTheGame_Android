@@ -4,14 +4,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -37,9 +41,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -71,6 +77,8 @@ fun MainScreen(
     val players = uiState.value.players
 
     Column(modifier = modifier.padding(paddingValues)) {
+        CourtPreview(teams = teams)
+
         PlayerCountControl(
             playersPerTeam = uiState.value.playersPerTeam,
             onIncrease = { gymViewModel.increasePlayersPerTeam() },
@@ -146,6 +154,72 @@ fun MainScreen(
             skippedTeam = skippedTeam,
             onDismiss = { gymViewModel.clearTeamOrderPrompt() }
         )
+    }
+}
+
+@Composable
+fun CourtPreview(
+    teams: List<Team>,
+    modifier: Modifier = Modifier
+) {
+    Row(modifier = modifier
+        .fillMaxWidth()
+        .padding(8.dp),
+        horizontalArrangement = Arrangement.SpaceAround
+    ) {
+        Spacer(modifier = Modifier.weight(1f))
+        CourtColumn(
+            teams = teams.filter { it.court == 1 }
+        )
+        CourtColumn(
+            teams = teams.filter { it.court == 2 }
+        )
+        Spacer(modifier = Modifier.weight(1f))
+    }
+}
+@Composable
+fun CourtColumn(
+    teams: List<Team>,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier
+        .padding(4.dp)
+        .width(IntrinsicSize.Min) // Allow column to shrink to fit content horizontally
+        .shadow(elevation = 4.dp)
+    ) {
+        var textHeight by remember { mutableStateOf(0.dp) } // Store text height
+        var remainingHeight by remember { mutableStateOf(80.dp) } // Track remaining height
+        if(teams.isNotEmpty()) {
+            Text(
+                text = "Court ${teams[0].court}",
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(4.dp),
+                onTextLayout = {
+                    textLayoutResult -> textHeight = textLayoutResult.size.height.dp // Measure text height
+                    remainingHeight -= textHeight // Subtract text height from remaining height
+                }
+            )
+        }
+        teams.forEach { team ->
+            val boxHeight = remainingHeight / (teams.size - teams.indexOf(team)) // Calculate height for each box
+            remainingHeight -= boxHeight // Update remaining height
+            Box(
+                modifier = Modifier
+                    .height(boxHeight)
+                    .aspectRatio(1f)
+                    .background(team.color)
+                    .drawBehind { // Draw the line
+                        val lineY = if(team.order == teams.minByOrNull { it.order }?.order) size.height * 2/3 else size.height / 3
+                        drawLine(
+                            color = nullTeamColor,
+                            start = Offset(0f, lineY),
+                            end = Offset(size.width, lineY),
+                            strokeWidth = 2f // Adjust thickness as needed
+                        )
+                    }
+            )
+        }
     }
 }
 
