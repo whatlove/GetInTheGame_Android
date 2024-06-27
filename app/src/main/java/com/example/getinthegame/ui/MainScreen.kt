@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -28,6 +26,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -53,12 +52,14 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.getinthegame.ui.theme.GetInTheGameTheme
@@ -78,7 +79,6 @@ fun MainScreen(
 
     Column(modifier = modifier.padding(paddingValues)) {
         CourtPreview(teams = teams)
-
         PlayerCountControl(
             playersPerTeam = uiState.value.playersPerTeam,
             onIncrease = { gymViewModel.increasePlayersPerTeam() },
@@ -169,10 +169,12 @@ fun CourtPreview(
     ) {
         Spacer(modifier = Modifier.weight(1f))
         CourtColumn(
-            teams = teams.filter { it.court == 1 }
+            teams = teams.filter { it.court == 1 },
+            modifier = Modifier.weight(1f)
         )
         CourtColumn(
-            teams = teams.filter { it.court == 2 }
+            teams = teams.filter { it.court == 2 },
+            modifier = Modifier.weight(1f)
         )
         Spacer(modifier = Modifier.weight(1f))
     }
@@ -184,41 +186,55 @@ fun CourtColumn(
 ) {
     Column(modifier = modifier
         .padding(4.dp)
-        .width(IntrinsicSize.Min) // Allow column to shrink to fit content horizontally
-        .shadow(elevation = 4.dp)
+        .fillMaxWidth()
     ) {
-        var textHeight by remember { mutableStateOf(0.dp) } // Store text height
-        var remainingHeight by remember { mutableStateOf(80.dp) } // Track remaining height
         if(teams.isNotEmpty()) {
             Text(
                 text = "Court ${teams[0].court}",
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
                     .padding(4.dp),
-                onTextLayout = {
-                    textLayoutResult -> textHeight = textLayoutResult.size.height.dp // Measure text height
-                    remainingHeight -= textHeight // Subtract text height from remaining height
-                }
+                style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold)
             )
         }
-        teams.forEach { team ->
-            val boxHeight = remainingHeight / (teams.size - teams.indexOf(team)) // Calculate height for each box
-            remainingHeight -= boxHeight // Update remaining height
-            Box(
+        Surface(
+            modifier = Modifier
+                .shadow(elevation = 2.dp)
+        ) {
+
+            Column(
                 modifier = Modifier
-                    .height(boxHeight)
-                    .aspectRatio(1f)
-                    .background(team.color)
-                    .drawBehind { // Draw the line
-                        val lineY = if(team.order == teams.minByOrNull { it.order }?.order) size.height * 2/3 else size.height / 3
-                        drawLine(
-                            color = nullTeamColor,
-                            start = Offset(0f, lineY),
-                            end = Offset(size.width, lineY),
-                            strokeWidth = 2f // Adjust thickness as needed
+                    .height(82.dp)
+            ) {
+                teams.forEachIndexed { index, team ->
+                    Box(
+                        modifier = Modifier
+                            .height(40.dp)
+                            .aspectRatio(1f)
+                            .align(Alignment.CenterHorizontally)
+                            .background(team.color)
+                            .drawBehind { // Draw the line
+                                val lineY = if(team.order == teams.minByOrNull { it.order }?.order) size.height * 2/3 else size.height / 3
+                                drawLine(
+                                    color = nullTeamColor,
+                                    start = Offset(0f, lineY),
+                                    end = Offset(size.width, lineY),
+                                    strokeWidth = 3f // Adjust thickness as needed
+                                )
+                            }
+                    )
+                    // Draw the "net" after the first team box
+                    if (index == 0 && teams.size > 1) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(2.dp) // Adjust line thickness as needed
+                                .padding(horizontal = 10.dp) // larger padding = smaller "net"
+                                .background(LocalContentColor.current) // Use default text color
                         )
                     }
-            )
+                }
+            }
         }
     }
 }
@@ -247,7 +263,13 @@ fun PlayerCountControl(
         ) {
             Text(text = "-")
         }
-        Text(text = "Players per Team: $playersPerTeam")
+        Text(
+            text = "Players per Team: $playersPerTeam",
+            modifier = Modifier.padding(
+                start = 4.dp, // Left padding
+                end = 4.dp   // Right padding
+            )
+        )
         Button(
             onClick = onIncrease,
             enabled = playersPerTeam < 8,
@@ -346,12 +368,6 @@ private fun TeamCard(
                 CourtButton(team = team, courtNumber = 1, gymViewModel = gymViewModel)
                 CourtButton(team = team, courtNumber = 2, gymViewModel = gymViewModel)
             }
-            Text(
-                text = team.currentOpponent?.name ?: "",
-                color = team.textColor,
-                textAlign = TextAlign.End,
-                modifier = Modifier.fillMaxSize()
-            )
         }
     }
 }
@@ -427,7 +443,7 @@ fun CourtButton(
     val oppositeCourt = if (courtNumber == 1) 2 else 1
     val courtText = when {
         team.court == courtNumber -> "ON\nCourt $courtNumber"
-        team.currentOpponent?.court == oppositeCourt -> "vs"
+        team.currentOpponent?.court == oppositeCourt -> "vs\n${team.currentOpponent?.colorName}"
         else -> "Court $courtNumber"
     }
     val courtColor = when {
