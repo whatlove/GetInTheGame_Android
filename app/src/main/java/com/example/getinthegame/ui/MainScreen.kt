@@ -197,11 +197,7 @@ fun CourtColumn(
                 style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold)
             )
         }
-        Surface(
-            modifier = Modifier
-                .shadow(elevation = 2.dp)
-        ) {
-
+        Surface(modifier = Modifier.shadow(elevation = 2.dp)) {
             Column(
                 modifier = Modifier
                     .height(82.dp)
@@ -213,7 +209,7 @@ fun CourtColumn(
                             .aspectRatio(1f)
                             .align(Alignment.CenterHorizontally)
                             .background(team.color)
-                            .drawBehind { // Draw the line
+                            .drawBehind { // Draw the 10' line
                                 val lineY = if(team.order == teams.minByOrNull { it.order }?.order) size.height * 2/3 else size.height / 3
                                 drawLine(
                                     color = nullTeamColor,
